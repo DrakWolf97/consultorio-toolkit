@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Consultorio · Dictado y Seguimiento</title>
+<style>
+  :root{
+    --pine:#17453B;        /* verde clínico profundo */
+    --pine-dark:#0E2F28;
+    --sage:#DCE8E1;        /* fondo suave */
+    --paper:#F7FAF8;
+    --ink:#1B2420;
+    --ink-soft:#5A6B63;
+    --accent:#C8642E;      /* ámbar quemado: acciones */
+    --accent-dark:#A04E1F;
+    --line:#C4D4CC;
+    --ok:#2E7D52;
+    --danger:#B3402E;
+    --radius:14px;
+    --shadow:0 2px 10px rgba(23,69,59,.08);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Segoe UI", -apple-system, "Helvetica Neue", Arial, sans-serif;
+    background:var(--sage);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  header{
+    background:var(--pine);
+    color:#fff;
+    padding:26px 24px 0;
+  }
+  .brand{max-width:900px;margin:0 auto}
+  .brand h1{
+    font-family:Georgia, "Times New Roman", serif;
+    font-weight:600;
+    font-size:1.7rem;
+    letter-spacing:.3px;
+  }
+  .brand p{
+    color:#BFD6CD;
+    font-size:.9rem;
+    margin-top:4px;
+  }
+  nav{
+    max-width:900px;margin:22px auto 0;
+    display:flex;gap:6px;
+  }
+  .tab-btn{
+    appearance:none;border:none;cursor:pointer;
+    background:rgba(255,255,255,.12);
+    color:#D8E7E0;
+    font-size:.95rem;font-weight:600;
+    padding:12px 22px;
+    border-radius:12px 12px 0 0;
+    transition:background .15s,color .15s;
+  }
+  .tab-btn:hover{background:rgba(255,255,255,.2)}
+  .tab-btn.active{background:var(--paper);color:var(--pine)}
+  .tab-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  main{
+    max-width:900px;margin:0 auto;
+    background:var(--paper);
+    min-height:70vh;
+    border-radius:0 var(--radius) var(--radius) var(--radius);
+    box-shadow:var(--shadow);
+    padding:28px 26px 40px;
+  }
+  section[hidden]{display:none}
+  h2{
+    font-family:Georgia, serif;font-weight:600;
+    font-size:1.25rem;color:var(--pine);
+    margin-bottom:6px;
+  }
+  .hint{color:var(--ink-soft);font-size:.88rem;margin-bottom:18px;line-height:1.5}
+
+  /* ---------- Dictado ---------- */
+  .mic-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .btn{
+    appearance:none;border:none;cursor:pointer;
+    font-size:.95rem;font-weight:600;
+    padding:12px 20px;border-radius:10px;
+    transition:background .15s, transform .05s;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:3px solid var(--pine);outline-offset:2px}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-dark)}
+  .btn-secondary{background:var(--pine);color:#fff}
+  .btn-secondary:hover{background:var(--pine-dark)}
+  .btn-ghost{background:transparent;color:var(--danger);border:1.5px solid var(--danger)}
+  .btn-ghost:hover{background:#FBEDEA}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+
+  .rec-dot{
+    width:12px;height:12px;border-radius:50%;
+    background:#9AAFA6;display:inline-block;
+  }
+  .recording .rec-dot{background:var(--danger);animation:pulse 1.1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media (prefers-reduced-motion:reduce){.recording .rec-dot{animation:none}}
+
+  .status{font-size:.85rem;color:var(--ink-soft)}
+  .recording .status{color:var(--danger);font-weight:600}
+
+  textarea#transcript{
+    width:100%;min-height:260px;resize:vertical;
+    font-family:inherit;font-size:1rem;line-height:1.6;
+    padding:16px;border-radius:10px;
+    border:1.5px solid var(--line);
+    background:#fff;color:var(--ink);
+  }
+  textarea#transcript:focus{outline:none;border-color:var(--pine)}
+  .interim{color:var(--ink-soft);font-style:italic;font-size:.9rem;min-height:1.4em;margin-top:6px}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .toast{
+    position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+    background:var(--pine-dark);color:#fff;
+    padding:12px 22px;border-radius:10px;
+    font-size:.9rem;box-shadow:var(--shadow);
+    opacity:0;pointer-events:none;transition:opacity .25s;
+    z-index:50;
+  }
+  .toast.show{opacity:1}
+  .warn-box{
+    background:#FDF3EC;border:1.5px solid var(--accent);
+    color:var(--accent-dark);
+    padding:12px 16px;border-radius:10px;
+    font-size:.88rem;margin-bottom:16px;display:none;
+  }
+
+  /* ---------- Pacientes ---------- */
+  form.add-row{
+    display:grid;grid-template-columns:1fr 200px auto;gap:10px;
+    margin-bottom:22px;
+  }
+  form.add-row input{
+    padding:12px 14px;font-size:.95rem;
+    border:1.5px solid var(--line);border-radius:10px;
+    background:#fff;
+  }
+  form.add-row input:focus{outline:none;border-color:var(--pine)}
+  table{width:100%;border-collapse:collapse;background:#fff;border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+  th,td{padding:13px 14px;text-align:left;font-size:.93rem}
+  thead th{
+    background:var(--pine);color:#E4F0EA;
+    font-size:.78rem;text-transform:uppercase;letter-spacing:.8px;font-weight:600;
+  }
+  tbody tr{border-top:1px solid var(--line)}
+  tbody tr:hover{background:#F2F7F4}
+  .tel{font-variant-numeric:tabular-nums;color:var(--ink-soft)}
+  .row-actions{display:flex;gap:8px;justify-content:flex-end}
+  .btn-sm{padding:8px 14px;font-size:.85rem;border-radius:8px}
+  .empty{
+    text-align:center;color:var(--ink-soft);
+    padding:34px 10px;font-size:.92rem;
+  }
+  details.template{
+    margin-top:26px;background:#fff;border:1.5px solid var(--line);
+    border-radius:10px;padding:16px 18px;
+  }
+  details.template summary{
+    cursor:pointer;font-weight:600;color:var(--pine);font-size:.93rem;
+  }
+  details.template textarea{
+    width:100%;min-height:170px;margin-top:12px;resize:vertical;
+    font-family:inherit;font-size:.92rem;line-height:1.55;
+    padding:12px;border:1.5px solid var(--line);border-radius:8px;
+  }
+  details.template textarea:focus{outline:none;border-color:var(--pine)}
+  details.template .hint{margin:8px 0 0}
+  .tpl-actions{display:flex;gap:10px;margin-top:10px}
+
+  /* ---------- Modal de bienvenida ---------- */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(14,47,40,.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:18px;z-index:100;
+  }
+  .modal-backdrop[hidden]{display:none}
+  .modal{
+    background:var(--paper);border-radius:var(--radius);
+    max-width:560px;width:100%;max-height:88vh;overflow-y:auto;
+    padding:26px 26px 22px;box-shadow:0 12px 40px rgba(0,0,0,.25);
+  }
+  .modal h3{
+    font-family:Georgia, serif;color:var(--pine);
+    font-size:1.2rem;margin-bottom:14px;
+  }
+  .modal ul{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:18px}
+  .modal li{
+    display:flex;gap:12px;align-items:flex-start;
+    font-size:.92rem;line-height:1.55;color:var(--ink);
+  }
+  .modal li .ico{font-size:1.2rem;line-height:1.3}
+  .modal .btn{width:100%}
+  .info-btn{
+    appearance:none;border:1.5px solid rgba(255,255,255,.4);
+    background:transparent;color:#D8E7E0;cursor:pointer;
+    border-radius:50%;width:30px;height:30px;font-size:.95rem;font-weight:700;
+    flex-shrink:0;
+  }
+  .info-btn:hover{background:rgba(255,255,255,.15)}
+  .info-btn:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .brand{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+
+  .backup-row{
+    display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+    margin-top:16px;
+  }
+  .backup-row .hint{margin:0;flex-basis:100%}
+
+  @media (max-width:640px){
+    form.add-row{grid-template-columns:1fr}
+    main{padding:20px 14px 32px;border-radius:0}
+    th:nth-child(2),td:nth-child(2){display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div>
+      <h1>Consultorio Toolkit</h1>
+      <p>Dictado clínico y radar emocional de pacientes — 100% local, sin servidores.</p>
+    </div>
+    <button class="info-btn" id="btnInfo" title="Información importante" aria-label="Ver información importante">ℹ</button>
+  </div>
+  <nav role="tablist">
+    <button class="tab-btn active" id="tabBtn1" role="tab" aria-selected="true" aria-controls="tab1">🎙 Dictado Clínico</button>
+    <button class="tab-btn" id="tabBtn2" role="tab" aria-selected="false" aria-controls="tab2">📋 Seguimiento Psicólogos</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ TAB 1: DICTADO ============ -->
+  <section id="tab1" role="tabpanel" aria-labelledby="tabBtn1">
+    <h2>Dictado clínico por voz</h2>
+    <p class="hint">Presiona <strong>Iniciar dictado</strong> y habla con normalidad. La transcripción usa el reconocimiento de voz nativo del navegador (gratis, funciona mejor en Chrome o Edge). Puedes editar el texto antes de copiarlo.</p>
+
+    <div class="warn-box" id="speechWarn">
+      ⚠️ Tu navegador no soporta la Web Speech API. Usa Google Chrome o Microsoft Edge para el dictado por voz.
+    </div>
+
+    <div class="mic-row" id="micRow">
+      <button class="btn btn-primary" id="btnRecord">▶ Iniciar dictado</button>
+      <span class="rec-dot" aria-hidden="true"></span>
+      <span class="status" id="recStatus">Listo para dictar</span>
+    </div>
+
+    <textarea id="transcript" placeholder="Aquí aparecerá tu dictado… También puedes escribir o corregir manualmente." spellcheck="true"></textarea>
+    <div class="interim" id="interim" aria-live="polite"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" id="btnCopySOAP">📋 Copiar con instrucciones (formato SOAP)</button>
+      <button class="btn btn-ghost" id="btnClear">Borrar todo</button>
+    </div>
+  </section>
+
+  <!-- ============ TAB 2: PACIENTES ============ -->
+  <section id="tab2" role="tabpanel" aria-labelledby="tabBtn2" hidden>
+    <h2>Seguimiento de pacientes</h2>
+    <p class="hint">Agrega pacientes con su número de WhatsApp. Al presionar <strong>Generar Mensaje</strong> se abrirá WhatsApp Web con el mensaje de radar emocional ya escrito, personalizado con el nombre del paciente. Todo se guarda en tu navegador (LocalStorage).</p>
+
+    <form class="add-row" id="addForm">
+      <input type="text" id="inpName" placeholder="Nombre del paciente" required autocomplete="off">
+      <input type="tel" id="inpPhone" placeholder="Teléfono (ej. 504XXXXXXXX)" required autocomplete="off">
+      <button type="submit" class="btn btn-primary">＋ Agregar</button>
+    </form>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Paciente</th>
+          <th>Teléfono</th>
+          <th style="text-align:right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="patientBody"></tbody>
+    </table>
+    <div class="empty" id="emptyState">Aún no hay pacientes registrados. Agrega el primero arriba. 🌱</div>
+
+    <div class="backup-row">
+      <button class="btn btn-secondary btn-sm" id="btnExport">⬇ Exportar respaldo</button>
+      <button class="btn btn-secondary btn-sm" id="btnImport">⬆ Importar respaldo</button>
+      <input type="file" id="fileImport" accept=".json,application/json" hidden>
+      <p class="hint">Descarga un archivo de respaldo de tus pacientes y guárdalo en un lugar seguro. Si cambias de computadora o limpias el navegador, impórtalo aquí para recuperar tu lista.</p>
+    </div>
+
+    <details class="template">
+      <summary>✏️ Personalizar mensaje de radar emocional</summary>
+      <p class="hint">Usa <code>{nombre}</code> donde quieras que aparezca el nombre del paciente. Los cambios se guardan automáticamente en tu navegador.</p>
+      <textarea id="tplText" spellcheck="true"></textarea>
+      <div class="tpl-actions">
+        <button class="btn btn-secondary btn-sm" id="btnSaveTpl">Guardar plantilla</button>
+        <button class="btn btn-ghost btn-sm" id="btnResetTpl">Restaurar mensaje original</button>
+      </div>
+    </details>
+  </section>
+</main>
+
+<!-- ============ MODAL DE BIENVENIDA ============ -->
+<div class="modal-backdrop" id="welcomeModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <h3 id="modalTitle">👋 Antes de empezar — 3 cosas importantes</h3>
+    <ul>
+      <li>
+        <span class="ico">🎙</span>
+        <span><strong>Permiso de micrófono:</strong> la primera vez que uses el dictado, tu navegador te pedirá permiso para usar el micrófono. Acéptalo para poder transcribir tu voz. El dictado funciona mejor en <strong>Google Chrome</strong> o <strong>Microsoft Edge</strong>.</span>
+      </li>
+      <li>
+        <span class="ico">💾</span>
+        <span><strong>Tus datos viven solo en este navegador:</strong> la lista de pacientes se guarda localmente en este equipo. Nada se envía a internet — pero si limpias los datos de navegación o cambias de computadora, la lista no se traslada sola. Usa el botón <strong>"Exportar respaldo"</strong> en la pestaña de Seguimiento para guardar una copia de seguridad y poder recuperarla después.</span>
+      </li>
+      <li>
+        <span class="ico">🔒</span>
+        <span><strong>Privacidad:</strong> esta herramienta no tiene servidores ni cuentas. La transcripción de voz la procesa el servicio de reconocimiento de tu navegador. Como con cualquier herramienta digital, evita incluir datos que identifiquen al paciente en el dictado si tu normativa local lo exige.</span>
+      </li>
+    </ul>
+    <button class="btn btn-primary" id="btnCloseModal">Entendido, comenzar</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/* ================= TABS ================= */
+const tabs = [
+  { btn: document.getElementById('tabBtn1'), panel: document.getElementById('tab1') },
+  { btn: document.getElementById('tabBtn2'), panel: document.getElementById('tab2') },
+];
+tabs.forEach(({btn, panel}) => {
+  btn.addEventListener('click', () => {
+    tabs.forEach(t => {
+      const active = t.btn === btn;
+      t.btn.classList.toggle('active', active);
+      t.btn.setAttribute('aria-selected', active);
+      t.panel.hidden = !active;
+    });
+  });
+});
+
+/* ================= TOAST ================= */
+const toast = document.getElementById('toast');
+let toastTimer;
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+}
+
+/* ================= TAB 1: DICTADO ================= */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const btnRecord  = document.getElementById('btnRecord');
+const recStatus  = document.getElementById('recStatus');
+const micRow     = document.getElementById('micRow');
+const transcript = document.getElementById('transcript');
+const interimEl  = document.getElementById('interim');
+let recognition  = null;
+let isRecording  = false;
+let userStopped  = false;
+
+if (!SR) {
+  document.getElementById('speechWarn').style.display = 'block';
+  btnRecord.disabled = true;
+} else {
+  recognition = new SR();
+  recognition.lang = 'es-HN';          // español (Honduras); el navegador hace fallback a es-ES/es-US
+  recognition.continuous = true;
+  recognition.interimResults = true;
+
+  recognition.onresult = (e) => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const txt = e.results[i][0].transcript;
+      if (e.results[i].isFinal) {
+        const needsSpace = transcript.value && !transcript.value.endsWith(' ') && !transcript.value.endsWith('\n');
+        transcript.value += (needsSpace ? ' ' : '') + txt.trim();
+      } else {
+        interim += txt;
+      }
+    }
+    interimEl.textContent = interim ? '… ' + interim : '';
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'not-allowed') {
+      showToast('Permiso de micrófono denegado. Habilítalo en el navegador.');
+      stopUI();
+    } else if (e.error === 'no-speech') {
+      recStatus.textContent = 'No se detectó voz… sigue hablando';
+    } else if (e.error !== 'aborted') {
+      showToast('Error de reconocimiento: ' + e.error);
+    }
+  };
+
+  // Chrome corta la sesión tras unos segundos de silencio: reiniciamos automáticamente
+  recognition.onend = () => {
+    if (isRecording && !userStopped) {
+      try { recognition.start(); } catch(_) {}
+    } else {
+      stopUI();
+    }
+  };
+
+  btnRecord.addEventListener('click', () => {
+    if (!isRecording) {
+      userStopped = false;
+      try {
+        recognition.start();
+        isRecording = true;
+        micRow.classList.add('recording');
+        btnRecord.textContent = '■ Detener dictado';
+        btnRecord.classList.remove('btn-primary');
+        btnRecord.classList.add('btn-ghost');
+        recStatus.textContent = 'Grabando… habla ahora';
+      } catch(_) {
+        showToast('No se pudo iniciar el micrófono.');
+      }
+    } else {
+      userStopped = true;
+      isRecording = false;
+      recognition.stop();
+    }
+  });
+}
+
+function stopUI(){
+  isRecording = false;
+  micRow.classList.remove('recording');
+  btnRecord.textContent = '▶ Iniciar dictado';
+  btnRecord.classList.add('btn-primary');
+  btnRecord.classList.remove('btn-ghost');
+  recStatus.textContent = 'Listo para dictar';
+  interimEl.textContent = '';
+}
+
+/* Copiar con instrucciones SOAP */
+const SOAP_PREFIX =
+`Actúa como un médico especialista en documentación clínica. A continuación te comparto la transcripción de un dictado clínico en bruto. Organízalo en formato SOAP profesional en español:
+
+- S (Subjetivo): motivo de consulta, síntomas referidos por el paciente, historia relatada.
+- O (Objetivo): hallazgos del examen físico, signos vitales, resultados de laboratorio o estudios mencionados.
+- A (Análisis/Assessment): impresión diagnóstica, diagnósticos diferenciales si aplican.
+- P (Plan): tratamiento, indicaciones, estudios solicitados, seguimiento y educación al paciente.
+
+Si algún dato no aparece en el dictado, indícalo como "No referido" en lugar de inventarlo. Corrige errores obvios de transcripción por contexto clínico y usa terminología médica apropiada.
+
+--- TRANSCRIPCIÓN DEL DICTADO ---
+`;
+
+document.getElementById('btnCopySOAP').addEventListener('click', async () => {
+  const text = transcript.value.trim();
+  if (!text) { showToast('No hay texto para copiar. Dicta o escribe algo primero.'); return; }
+  const payload = SOAP_PREFIX + text;
+  try {
+    await navigator.clipboard.writeText(payload);
+    showToast('✅ Copiado. Pégalo en Claude para obtener tu nota SOAP.');
+  } catch(_) {
+    // Fallback para contextos sin Clipboard API (file:// en algunos navegadores)
+    const ta = document.createElement('textarea');
+    ta.value = payload;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+    showToast('✅ Copiado. Pégalo en Claude para obtener tu nota SOAP.');
+  }
+});
+
+document.getElementById('btnClear').addEventListener('click', () => {
+  if (transcript.value && !confirm('¿Borrar toda la transcripción?')) return;
+  transcript.value = '';
+  interimEl.textContent = '';
+});
+
+/* ================= TAB 2: PACIENTES ================= */
+const LS_PATIENTS = 'consultorio_pacientes_v1';
+const LS_TEMPLATE = 'consultorio_plantilla_v1';
+
+const DEFAULT_TEMPLATE =
+`Hola {nombre}, espero que estés bien. 🌿 Como parte de tu proceso, me gustaría hacer un breve chequeo emocional contigo. Cuando tengas un momento tranquilo, respóndeme por favor estas preguntas:
+
+1. Del 1 al 10, ¿cómo calificarías tu estado de ánimo general esta semana?
+2. Desde nuestra última sesión, ¿qué situación te ha generado mayor carga emocional y cómo la manejaste?
+3. ¿Has notado cambios en tu sueño, apetito o niveles de energía?
+4. ¿Qué pensamiento ha ocupado más espacio en tu mente estos días?
+5. ¿Hubo algún momento en el que aplicaras alguna de las herramientas que hemos trabajado? ¿Cómo resultó?
+6. En una palabra, ¿cómo te sientes hoy?
+
+No hay respuestas correctas ni incorrectas; esto me ayuda a acompañarte mejor. Quedo pendiente. Un abrazo.`;
+
+const addForm     = document.getElementById('addForm');
+const inpName     = document.getElementById('inpName');
+const inpPhone    = document.getElementById('inpPhone');
+const patientBody = document.getElementById('patientBody');
+const emptyState  = document.getElementById('emptyState');
+const tplText     = document.getElementById('tplText');
+
+let patients = [];
+try { patients = JSON.parse(localStorage.getItem(LS_PATIENTS)) || []; } catch(_) { patients = []; }
+tplText.value = localStorage.getItem(LS_TEMPLATE) || DEFAULT_TEMPLATE;
+
+function savePatients(){ localStorage.setItem(LS_PATIENTS, JSON.stringify(patients)); }
+
+function normalizePhone(raw){
+  let digits = raw.replace(/\D/g, '');
+  // Honduras: números locales de 8 dígitos → anteponer código de país 504
+  if (digits.length === 8) digits = '504' + digits;
+  return digits;
+}
+
+function render(){
+  patientBody.innerHTML = '';
+  emptyState.style.display = patients.length ? 'none' : 'block';
+  patients.forEach((p, i) => {
+    const tr = document.createElement('tr');
+
+    const tdName = document.createElement('td');
+    tdName.textContent = p.name;
+
+    const tdPhone = document.createElement('td');
+    tdPhone.className = 'tel';
+    tdPhone.textContent = '+' + p.phone;
+
+    const tdAct = document.createElement('td');
+    const wrap = document.createElement('div');
+    wrap.className = 'row-actions';
+
+    const btnMsg = document.createElement('button');
+    btnMsg.className = 'btn btn-secondary btn-sm';
+    btnMsg.textContent = '💬 Generar Mensaje';
+    btnMsg.addEventListener('click', () => {
+      const template = tplText.value || DEFAULT_TEMPLATE;
+      const msg = template.split('{nombre}').join(p.name.split(' ')[0]);
+      const url = 'https://wa.me/' + p.phone + '?text=' + encodeURIComponent(msg);
+      window.open(url, '_blank');
+    });
+
+    const btnDel = document.createElement('button');
+    btnDel.className = 'btn btn-ghost btn-sm';
+    btnDel.textContent = 'Eliminar';
+    btnDel.addEventListener('click', () => {
+      if (!confirm('¿Eliminar a ' + p.name + ' de la lista?')) return;
+      patients.splice(i, 1);
+      savePatients();
+      render();
+    });
+
+    wrap.append(btnMsg, btnDel);
+    tdAct.appendChild(wrap);
+    tr.append(tdName, tdPhone, tdAct);
+    patientBody.appendChild(tr);
+  });
+}
+
+addForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = inpName.value.trim();
+  const phone = normalizePhone(inpPhone.value);
+  if (!name) { showToast('Escribe el nombre del paciente.'); return; }
+  if (phone.length < 10) { showToast('Número inválido. Incluye el código de país (ej. 504 + 8 dígitos).'); return; }
+  patients.push({ name, phone });
+  savePatients();
+  render();
+  addForm.reset();
+  inpName.focus();
+  showToast('Paciente agregado ✅');
+});
+
+document.getElementById('btnSaveTpl').addEventListener('click', () => {
+  localStorage.setItem(LS_TEMPLATE, tplText.value);
+  showToast('Plantilla guardada ✅');
+});
+document.getElementById('btnResetTpl').addEventListener('click', () => {
+  if (!confirm('¿Restaurar el mensaje original? Se perderán tus cambios.')) return;
+  tplText.value = DEFAULT_TEMPLATE;
+  localStorage.setItem(LS_TEMPLATE, DEFAULT_TEMPLATE);
+  showToast('Plantilla restaurada.');
+});
+
+// Autoguardado suave de la plantilla al escribir
+let tplTimer;
+tplText.addEventListener('input', () => {
+  clearTimeout(tplTimer);
+  tplTimer = setTimeout(() => localStorage.setItem(LS_TEMPLATE, tplText.value), 800);
+});
+
+/* ================= EXPORTAR / IMPORTAR RESPALDO ================= */
+document.getElementById('btnExport').addEventListener('click', () => {
+  if (!patients.length) { showToast('No hay pacientes que respaldar todavía.'); return; }
+  const data = {
+    app: 'consultorio-toolkit',
+    version: 1,
+    fecha: new Date().toISOString(),
+    pacientes: patients,
+    plantilla: tplText.value
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const hoy = new Date().toISOString().slice(0,10);
+  a.download = 'respaldo-pacientes-' + hoy + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('✅ Respaldo descargado. Guárdalo en un lugar seguro.');
+});
+
+const fileImport = document.getElementById('fileImport');
+document.getElementById('btnImport').addEventListener('click', () => fileImport.click());
+fileImport.addEventListener('change', () => {
+  const file = fileImport.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const list = Array.isArray(data) ? data : data.pacientes;
+      if (!Array.isArray(list)) throw new Error('formato');
+      const clean = list.filter(p => p && p.name && p.phone)
+                        .map(p => ({ name: String(p.name), phone: String(p.phone).replace(/\D/g,'') }));
+      if (!clean.length) throw new Error('vacío');
+      // Combinar sin duplicar (mismo teléfono = mismo paciente)
+      const existing = new Set(patients.map(p => p.phone));
+      let added = 0;
+      clean.forEach(p => { if (!existing.has(p.phone)) { patients.push(p); existing.add(p.phone); added++; } });
+      if (data.plantilla) {
+        tplText.value = data.plantilla;
+        localStorage.setItem(LS_TEMPLATE, data.plantilla);
+      }
+      savePatients();
+      render();
+      showToast(added ? '✅ Respaldo importado: ' + added + ' paciente(s) agregado(s).' : 'El respaldo no contenía pacientes nuevos.');
+    } catch(_) {
+      showToast('⚠️ El archivo no es un respaldo válido de esta herramienta.');
+    }
+    fileImport.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ================= MODAL DE BIENVENIDA ================= */
+const LS_WELCOME = 'consultorio_bienvenida_v1';
+const welcomeModal = document.getElementById('welcomeModal');
+function openModal(){ welcomeModal.hidden = false; document.getElementById('btnCloseModal').focus(); }
+function closeModal(){ welcomeModal.hidden = true; localStorage.setItem(LS_WELCOME, '1'); }
+document.getElementById('btnCloseModal').addEventListener('click', closeModal);
+document.getElementById('btnInfo').addEventListener('click', openModal);
+welcomeModal.addEventListener('click', (e) => { if (e.target === welcomeModal) closeModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !welcomeModal.hidden) closeModal(); });
+if (!localStorage.getItem(LS_WELCOME)) openModal();
+
+render();
+</script>
+</body>
+</html>
