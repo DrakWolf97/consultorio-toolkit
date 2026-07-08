@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Consultorio · Dictado y Seguimiento</title>
+<!-- Contador anónimo de visitas (GoatCounter): sin cookies, sin datos personales -->
+<script data-goatcounter="https://consultorio-toolkit.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <style>
   :root{
     --pine:#17453B;        /* verde clínico profundo */
@@ -288,7 +290,7 @@
       <button class="btn btn-secondary btn-sm" id="btnExport">⬇ Exportar respaldo</button>
       <button class="btn btn-secondary btn-sm" id="btnImport">⬆ Importar respaldo</button>
       <input type="file" id="fileImport" accept=".json,application/json" hidden>
-      <p class="hint">Descarga un archivo de respaldo de tus pacientes y guárdalo en un lugar seguro. Si cambias de computadora o limpias el navegador, impórtalo aquí para recuperar tu lista.</p>
+      <p class="hint">Descarga un archivo de respaldo de tus pacientes y guárdalo en un lugar seguro. Si cambias de computadora o limpias el navegador, impórtalo aquí para recuperar tu lista. No necesitas abrir ese archivo — solo guárdalo; la app lo lee por ti al importarlo.</p>
     </div>
 
     <details class="template">
@@ -318,7 +320,7 @@
       </li>
       <li>
         <span class="ico">🔒</span>
-        <span><strong>Privacidad:</strong> esta herramienta no tiene servidores ni cuentas. La transcripción de voz la procesa el servicio de reconocimiento de tu navegador. Como con cualquier herramienta digital, evita incluir datos que identifiquen al paciente en el dictado si tu normativa local lo exige.</span>
+        <span><strong>Privacidad:</strong> esta herramienta no tiene servidores ni cuentas. La transcripción de voz la procesa el servicio de reconocimiento de tu navegador. Como con cualquier herramienta digital, evita incluir datos que identifiquen al paciente en el dictado si tu normativa local lo exige. Usamos un contador anónimo de visitas (sin cookies ni datos personales) únicamente para saber cuántas personas usan la herramienta.</span>
       </li>
     </ul>
     <button class="btn btn-primary" id="btnCloseModal">Entendido, comenzar</button>
@@ -343,6 +345,17 @@ tabs.forEach(({btn, panel}) => {
     });
   });
 });
+
+/* ================= MÉTRICAS ANÓNIMAS ================= */
+// Cuenta usos de funciones (sin datos personales, sin cookies).
+// Si GoatCounter está bloqueado por un adblocker, simplemente no cuenta nada.
+function trackEvent(name){
+  try {
+    if (window.goatcounter && window.goatcounter.count) {
+      window.goatcounter.count({ path: name, title: name, event: true });
+    }
+  } catch(_) {}
+}
 
 /* ================= TOAST ================= */
 const toast = document.getElementById('toast');
@@ -413,6 +426,7 @@ if (!SR) {
       userStopped = false;
       try {
         recognition.start();
+        trackEvent('evento-dictado-iniciado');
         isRecording = true;
         micRow.classList.add('recording');
         btnRecord.textContent = '■ Detener dictado';
@@ -457,6 +471,7 @@ Si algún dato no aparece en el dictado, indícalo como "No referido" en lugar d
 document.getElementById('btnCopySOAP').addEventListener('click', async () => {
   const text = transcript.value.trim();
   if (!text) { showToast('No hay texto para copiar. Dicta o escribe algo primero.'); return; }
+  trackEvent('evento-copia-soap');
   const payload = SOAP_PREFIX + text;
   try {
     await navigator.clipboard.writeText(payload);
@@ -536,6 +551,7 @@ function render(){
     btnMsg.className = 'btn btn-secondary btn-sm';
     btnMsg.textContent = '💬 Generar Mensaje';
     btnMsg.addEventListener('click', () => {
+      trackEvent('evento-mensaje-whatsapp');
       const template = tplText.value || DEFAULT_TEMPLATE;
       const msg = template.split('{nombre}').join(p.name.split(' ')[0]);
       const url = 'https://wa.me/' + p.phone + '?text=' + encodeURIComponent(msg);
